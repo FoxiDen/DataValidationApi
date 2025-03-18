@@ -14,4 +14,9 @@ public static class ValidationMessageHelper
         
         return $"{validationMessage} - not valid for {lineNumber} line '{line}'";
     }
+    
+    public static string FormatValidationTimedMessage(int lineNumber, long validationTicks, bool isValid)
+    {
+        return $"Line {lineNumber} took {validationTicks} ticks to validate (lineValid: {isValid.ToString()})";
+    }
 }

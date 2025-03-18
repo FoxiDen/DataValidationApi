@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using DataValidationApi.Helpers;
 using DataValidationApi.Models;
@@ -6,7 +7,7 @@ namespace DataValidationApi.Services;
 
 public class BankAccountValidationService : IBankAccountValidationService
 {
-    public async Task<BaseValidationResult> ValidateAccountsData(IFormFile input)
+    public async Task<BaseValidationResult> ValidateAccountsData(IFormFile input, bool isTimed)
     {
         if (input.Length == 0)
         {
@@ -15,8 +16,8 @@ public class BankAccountValidationService : IBankAccountValidationService
 
         using var reader = new StreamReader(input.OpenReadStream());
         var inputData = await reader.ReadToEndAsync();
-        
-        return ValidateAccountDataInternal(inputData);
+
+        return isTimed ? ValidateAccountDataTimedInternal(inputData) : ValidateAccountDataInternal(inputData);
     }
     
     private static BaseValidationResult ValidateAccountDataInternal(string input)
@@ -38,6 +39,34 @@ public class BankAccountValidationService : IBankAccountValidationService
         return errors.Any()
             ? new AccountValidationErrorResult(errors)
             : new AccountValidationSuccessResult();
+    }
+    
+    private static BaseValidationResult ValidateAccountDataTimedInternal(string input)
+    {
+        var lines = input.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var lineTimings = new List<string>();
+        var lineNumber = 1;
+        var stopWatch = new Stopwatch();
+        var isValid = true;
+        
+        foreach (var line in lines)
+        {
+            stopWatch.Restart();
+            
+            var result = ValidateLine(line, lineNumber);
+            var isResultValid = result == null;
+            
+            if (!isResultValid)
+            {
+                isValid = false;
+            }
+            
+            stopWatch.Stop();
+            lineTimings.Add(ValidationMessageHelper.FormatValidationTimedMessage(lineNumber, stopWatch.ElapsedTicks, isResultValid));
+            lineNumber++;
+        }
+
+        return new AccountValidationTimedResult(lineTimings, isValid);
     }
 
     private static string? ValidateLine(string line, int lineNumber)

@@ -1,4 +1,5 @@
 using DataValidationApi.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DataValidationApi;
 
@@ -18,9 +19,9 @@ public static class InjectionExtensions
     {
         var validationGroup = app.MapGroup("/validate").DisableAntiforgery();
         
-        validationGroup.MapPost("/accounts", async (IBankAccountValidationService validationService, IFormFile file) =>
+        validationGroup.MapPost("/accounts", async (IBankAccountValidationService validationService, IFormFile file, [FromQuery] bool timed = false) =>
         {
-            var validationResult = await validationService.ValidateAccountsData(file);
+            var validationResult = await validationService.ValidateAccountsData(file, timed);
 
             return validationResult.IsValid
                 ? Results.Ok(validationResult)

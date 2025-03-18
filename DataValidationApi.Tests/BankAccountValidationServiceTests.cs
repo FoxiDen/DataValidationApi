@@ -15,7 +15,7 @@ public class BankAccountValidationServiceTests : BaseTests
         var fileContent = "John 3293982\nJane 3293982p";
         var fileMock = CreateMockFile(fileContent);
 
-        var result = await _validationService.ValidateAccountsData(fileMock.Object);
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, false);
 
         using (new AssertionScope())
         {
@@ -32,7 +32,7 @@ public class BankAccountValidationServiceTests : BaseTests
     {
         var fileMock = CreateMockFile(fileContent);
 
-        var result = await _validationService.ValidateAccountsData(fileMock.Object);
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, false);
 
         using (new AssertionScope())
         {
@@ -56,7 +56,7 @@ public class BankAccountValidationServiceTests : BaseTests
     {
         var fileMock = CreateMockFile(fileContent);
 
-        var result = await _validationService.ValidateAccountsData(fileMock.Object);
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, false);
 
         using (new AssertionScope())
         {
@@ -77,7 +77,7 @@ public class BankAccountValidationServiceTests : BaseTests
     {
         var fileMock = CreateMockFile(string.Empty); 
 
-        var result = await _validationService.ValidateAccountsData(fileMock.Object);
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, false);
 
         using (new AssertionScope())
         {
@@ -95,7 +95,7 @@ public class BankAccountValidationServiceTests : BaseTests
         var fileContent = "InvalidAccountFormat";
         var fileMock = CreateMockFile(fileContent);
 
-        var result = await _validationService.ValidateAccountsData(fileMock.Object);
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, false);
 
         using (new AssertionScope())
         {
@@ -104,6 +104,28 @@ public class BankAccountValidationServiceTests : BaseTests
             
             var errorResult = result as AccountValidationErrorResult;
             errorResult!.Errors.Should().Contain("Line 1 - Invalid format, should contain an account name and number for line 'InvalidAccountFormat'");
+        }
+    }
+    
+    [Fact]
+    public async Task ValidateAccountsDataTimed_ShouldReturnTimedResult_WhenFileIsProcessed()
+    {
+        var fileContent = "John 3293982\nInvalidName 5293982\nJane 3293982p\n";
+        var fileMock = CreateMockFile(fileContent);
+
+        var result = await _validationService.ValidateAccountsData(fileMock.Object, true);
+
+        using (new AssertionScope())
+        {
+            result.Should().BeOfType<AccountValidationTimedResult>();
+            result.IsValid.Should().BeFalse();
+
+            var timedResult = result as AccountValidationTimedResult;
+            timedResult!.TimedLines.Should().HaveCount(4);
+            timedResult.TimedLines[0].Should().MatchRegex(@"Line 1 took \d+ ticks to validate \(lineValid: True\)");
+            timedResult.TimedLines[1].Should().MatchRegex(@"Line 2 took \d+ ticks to validate \(lineValid: False\)");
+            timedResult.TimedLines[2].Should().MatchRegex(@"Line 3 took \d+ ticks to validate \(lineValid: True\)");
+            timedResult.TimedLines[3].Should().MatchRegex(@"Line 4 took \d+ ticks to validate \(lineValid: False\)");
         }
     }
 }
